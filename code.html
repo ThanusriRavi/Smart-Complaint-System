@@ -1,0 +1,794 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Complaint Management System</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+  <style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #22263a;
+    --text: #e8eaf0;
+    --accent: #4f8ef7;
+    --danger: #f75f5f;
+    --success: #3dd68c;
+    --warning: #f7b955;
+    --border: #2e3350;
+  }
+  * { box-sizing: border-box; }
+  html, body, #app-root { height: 100%; margin: 0; padding: 0; font-family: 'Sora', sans-serif; background: var(--bg); color: var(--text); }
+  #app-root { overflow: auto; }
+
+  .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 999px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+  .badge-pending    { background: rgba(247,185,85,.15);  color: var(--warning); }
+  .badge-progress   { background: rgba(79,142,247,.15);  color: var(--accent);  }
+  .badge-resolved   { background: rgba(61,214,140,.15);  color: var(--success); }
+  .badge-low        { background: rgba(61,214,140,.15);  color: var(--success); }
+  .badge-medium     { background: rgba(247,185,85,.15);  color: var(--warning); }
+  .badge-high       { background: rgba(247,95,95,.15);   color: var(--danger);  }
+  .badge-critical   { background: rgba(247,95,95,.3);    color: var(--danger);  border: 1px solid var(--danger); }
+
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: all .18s; font-family: 'Sora', sans-serif; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover:not(:disabled) { background: #6ba3ff; transform: translateY(-1px); }
+  .btn-ghost   { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover:not(:disabled) { background: var(--surface2); }
+  .btn-danger  { background: rgba(247,95,95,.12); color: var(--danger); border: 1px solid rgba(247,95,95,.3); }
+  .btn-danger:hover:not(:disabled) { background: rgba(247,95,95,.22); }
+  .btn-success { background: rgba(61,214,140,.12); color: var(--success); border: 1px solid rgba(61,214,140,.3); }
+  .btn-success:hover:not(:disabled) { background: rgba(61,214,140,.22); }
+
+  .input-field { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; color: var(--text); font-size: 13px; font-family: 'Sora', sans-serif; outline: none; transition: border-color .18s; }
+  .input-field:focus { border-color: var(--accent); }
+  .input-field option { background: var(--surface2); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 18px 20px; }
+
+  .sidebar-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; color: #8b92ae; }
+  .sidebar-link:hover { background: var(--surface2); color: var(--text); }
+  .sidebar-link.active { background: rgba(79,142,247,.14); color: var(--accent); }
+
+  .complaint-row { border-bottom: 1px solid var(--border); transition: background .15s; }
+  .complaint-row:last-child { border-bottom: none; }
+  .complaint-row:hover { background: rgba(255,255,255,.025); }
+
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 20px; border-radius: 10px; font-size: 13px; font-weight: 600; z-index: 9999; animation: slideUp .25s ease; pointer-events: none; }
+  .toast-success { background: rgba(61,214,140,.15); color: var(--success); border: 1px solid rgba(61,214,140,.4); }
+  .toast-error   { background: rgba(247,95,95,.15);  color: var(--danger);  border: 1px solid rgba(247,95,95,.4); }
+  .toast-info    { background: rgba(79,142,247,.15); color: var(--accent);  border: 1px solid rgba(79,142,247,.4); }
+  @keyframes slideUp { from { opacity:0; transform: translateY(16px); } to { opacity:1; transform: translateY(0); } }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: center; justify-content: center; z-index: 100; backdrop-filter: blur(3px); }
+  .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 28px; width: 520px; max-width: 95%; max-height: 90%; overflow-y: auto; }
+
+  .spinner { width: 18px; height: 18px; border: 2px solid rgba(255,255,255,.2); border-top-color: currentColor; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .confirm-inline { display: flex; align-items: center; gap: 8px; }
+
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+</style>
+  <style>body { box-sizing: border-box; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+  <script src="/_sdk/element_sdk.js" type="text/javascript"></script>
+ </head>
+ <body>
+  <div id="app-root" class="flex flex-col"><!-- AUTH SCREEN -->
+   <div id="auth-screen" class="flex items-center justify-center" style="min-height:100%; background: radial-gradient(ellipse at 60% 30%, #1c2244 0%, var(--bg) 70%);">
+    <div style="width:420px; max-width:95%;" class="card p-8">
+     <div class="flex items-center gap-3 mb-6">
+      <div style="background:var(--accent); border-radius:10px; padding:8px;"><i data-lucide="shield-alert" style="width:22px;height:22px;color:#fff;"></i>
+      </div>
+      <div>
+       <h1 id="auth-app-title" style="font-size:18px; font-weight:700; margin:0;">Smart Complaint System</h1>
+       <p style="font-size:11px; color:#8b92ae; margin:0;" id="auth-org-name">Your Organization</p>
+      </div>
+     </div><!-- Tab switcher -->
+     <div style="display:flex; background:var(--surface2); border-radius:9px; padding:3px; margin-bottom:20px;"><button id="tab-login" class="btn" style="flex:1; justify-content:center; background:var(--accent); color:#fff; border-radius:7px; font-size:13px;" onclick="switchAuthTab('login')">Login</button> <button id="tab-signup" class="btn" style="flex:1; justify-content:center; background:transparent; color:#8b92ae; border-radius:7px; font-size:13px;" onclick="switchAuthTab('signup')">Sign Up</button>
+     </div>
+     <form id="auth-form" onsubmit="handleAuth(event)">
+      <div id="signup-name-field" style="display:none; margin-bottom:14px;"><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="auth-name">Full Name</label> <input id="auth-name" class="input-field" type="text" placeholder="Name">
+      </div>
+      <div style="margin-bottom:14px;"><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="auth-email">Email Address</label> <input id="auth-email" class="input-field" type="email" placeholder="you@example.com" required>
+      </div>
+      <div style="margin-bottom:8px;"><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="auth-pass">Password</label> <input id="auth-pass" class="input-field" type="password" placeholder="••••••••" required>
+      </div>
+      <div id="admin-hint" style="display:none; font-size:11px; color:#8b92ae; margin-bottom:16px; padding:8px 12px; background:rgba(79,142,247,.07); border-radius:7px; border:1px solid rgba(79,142,247,.15);"><i data-lucide="info" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> Use <strong style="color:var(--accent);">admin@demo.com</strong> to access Admin Dashboard
+      </div><button type="submit" id="auth-btn" class="btn btn-primary w-full" style="justify-content:center; width:100%; font-size:14px; padding:11px;"> <span id="auth-btn-text">Login</span> </button>
+      <p id="auth-error" style="color:var(--danger); font-size:12px; margin-top:10px; display:none;"></p>
+     </form>
+    </div>
+   </div><!-- MAIN APP -->
+   <div id="main-app" style="display:none; flex:1; min-height:100%; flex-direction:column;"><!-- Top Bar -->
+    <header style="background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0; position:sticky; top:0; z-index:50;">
+     <div class="flex items-center gap-3">
+      <div style="background:var(--accent); border-radius:8px; padding:6px;"><i data-lucide="shield-alert" style="width:16px;height:16px;color:#fff;"></i>
+      </div><span id="header-app-title" style="font-weight:700; font-size:15px;">Smart Complaint System</span> <span id="admin-badge" style="display:none;" class="badge badge-progress">Admin</span>
+     </div>
+     <div class="flex items-center gap-3"><span id="header-user" style="font-size:12px; color:#8b92ae;"></span> <button class="btn btn-ghost" style="padding:6px 12px; font-size:12px;" onclick="logout()"> <i data-lucide="log-out" style="width:14px;height:14px;"></i> Logout </button>
+     </div>
+    </header>
+    <div style="display:flex; flex:1; overflow:hidden;"><!-- Sidebar -->
+     <aside style="width:210px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); padding:16px 10px; display:flex; flex-direction:column; gap:4px; overflow-y:auto;">
+      <div id="nav-dashboard" class="sidebar-link active" onclick="switchView('dashboard')"><i data-lucide="layout-dashboard" style="width:16px;height:16px;"></i> Dashboard
+      </div>
+      <div id="nav-complaints" class="sidebar-link" onclick="switchView('complaints')"><i data-lucide="file-text" style="width:16px;height:16px;"></i> Complaints
+      </div>
+      <div id="nav-new" class="sidebar-link" onclick="switchView('new')"><i data-lucide="plus-circle" style="width:16px;height:16px;"></i> Raise Complaint
+      </div>
+      <div id="nav-admin" class="sidebar-link" style="display:none;" onclick="switchView('admin')"><i data-lucide="settings-2" style="width:16px;height:16px;"></i> Admin Panel
+      </div>
+      <div style="flex:1;"></div>
+      <div style="padding:10px 14px; font-size:11px; color:#8b92ae;" id="footer-text-sidebar">
+       © 2026 Complaint System
+      </div>
+     </aside><!-- Content -->
+     <main style="flex:1; overflow:auto; padding:24px;"><!-- DASHBOARD VIEW -->
+      <div id="view-dashboard">
+       <h2 style="font-size:20px; font-weight:700; margin:0 0 20px;">Dashboard</h2>
+       <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px;">
+        <div class="stat-card">
+         <div style="font-size:11px; color:#8b92ae; margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;">
+          Total
+         </div>
+         <div id="stat-total" style="font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace;">
+          0
+         </div>
+        </div>
+        <div class="stat-card">
+         <div style="font-size:11px; color:var(--warning); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;">
+          Pending
+         </div>
+         <div id="stat-pending" style="font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--warning);">
+          0
+         </div>
+        </div>
+        <div class="stat-card">
+         <div style="font-size:11px; color:var(--accent); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;">
+          In Progress
+         </div>
+         <div id="stat-progress" style="font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--accent);">
+          0
+         </div>
+        </div>
+        <div class="stat-card">
+         <div style="font-size:11px; color:var(--success); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;">
+          Resolved
+         </div>
+         <div id="stat-resolved" style="font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--success);">
+          0
+         </div>
+        </div>
+        <div class="stat-card">
+         <div style="font-size:11px; color:var(--danger); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;">
+          Critical
+         </div>
+         <div id="stat-critical" style="font-size:28px; font-weight:700; font-family:'JetBrains Mono',monospace; color:var(--danger);">
+          0
+         </div>
+        </div>
+       </div>
+       <h3 style="font-size:14px; font-weight:600; margin:0 0 12px; color:#8b92ae; text-transform:uppercase; letter-spacing:.06em;">Recent Complaints</h3>
+       <div class="card" id="dashboard-list">
+        <div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">
+         No complaints yet.
+        </div>
+       </div>
+      </div><!-- COMPLAINTS VIEW -->
+      <div id="view-complaints" style="display:none;">
+       <div class="flex items-center justify-between mb-5">
+        <h2 style="font-size:20px; font-weight:700; margin:0;">All Complaints</h2>
+        <div class="flex gap-2"><select id="filter-status" class="input-field" style="width:auto; padding:7px 12px;" onchange="renderComplaints()"> <option value="">All Statuses</option> <option value="Pending">Pending</option> <option value="In Progress">In Progress</option> <option value="Resolved">Resolved</option> </select> <select id="filter-priority" class="input-field" style="width:auto; padding:7px 12px;" onchange="renderComplaints()"> <option value="">All Priorities</option> <option value="Low">Low</option> <option value="Medium">Medium</option> <option value="High">High</option> <option value="Critical">Critical</option> </select>
+        </div>
+       </div>
+       <div class="card" id="complaints-list">
+        <div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">
+         No complaints found.
+        </div>
+       </div>
+      </div><!-- NEW COMPLAINT VIEW -->
+      <div id="view-new" style="display:none;">
+       <h2 style="font-size:20px; font-weight:700; margin:0 0 20px;">Raise a Complaint</h2>
+       <div class="card" style="max-width:580px; padding:28px;">
+        <form id="complaint-form" onsubmit="submitComplaint(event)">
+         <div style="margin-bottom:16px;"><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="c-title">Complaint Title *</label> <input id="c-title" class="input-field" type="text" placeholder="Brief summary of the issue" required>
+         </div>
+         <div style="margin-bottom:16px;"><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="c-desc">Description *</label> <textarea id="c-desc" class="input-field" rows="4" placeholder="Describe the issue in detail..." required style="resize:vertical;"></textarea>
+         </div>
+         <div style="display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:16px;">
+          <div><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="c-category">Category *</label> <select id="c-category" class="input-field" required> <option value="">Select category</option> <option>Technical</option> <option>Billing</option> <option>Service</option> <option>HR / Workplace</option> <option>Infrastructure</option> <option>Other</option> </select>
+          </div>
+          <div><label style="font-size:12px; color:#8b92ae; display:block; margin-bottom:5px;" for="c-priority">Priority *</label> <select id="c-priority" class="input-field" required> <option value="">Select priority</option> <option>Low</option> <option>Medium</option> <option>High</option> <option>Critical</option> </select>
+          </div>
+         </div>
+         <div id="limit-warning" style="display:none; background:rgba(247,95,95,.1); border:1px solid rgba(247,95,95,.3); border-radius:8px; padding:10px 14px; font-size:12px; color:var(--danger); margin-bottom:14px;">
+          ⚠️ Maximum limit of 999 complaints reached. Please contact admin.
+         </div><button type="submit" id="submit-btn" class="btn btn-primary" style="font-size:14px; padding:11px 22px;"> <span id="submit-btn-text">Submit Complaint</span> </button>
+        </form>
+       </div>
+      </div><!-- ADMIN VIEW -->
+      <div id="view-admin" style="display:none;">
+       <h2 style="font-size:20px; font-weight:700; margin:0 0 20px;">Admin Panel</h2>
+       <div class="card" id="admin-list">
+        <div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">
+         No complaints to manage.
+        </div>
+       </div>
+      </div>
+     </main>
+    </div>
+   </div>
+  </div><!-- Detail Modal -->
+  <div id="detail-modal" class="modal-bg" style="display:none;" onclick="closeModal(event)">
+   <div class="modal" id="modal-inner">
+    <div class="flex items-center justify-between mb-4">
+     <h3 style="font-size:16px; font-weight:700; margin:0;" id="modal-title">Complaint Details</h3><button class="btn btn-ghost" style="padding:5px 10px;" onclick="document.getElementById('detail-modal').style.display='none'"> <i data-lucide="x" style="width:16px;height:16px;"></i> </button>
+    </div>
+    <div id="modal-body"></div>
+   </div>
+  </div><!-- Toast -->
+  <div id="toast" class="toast" style="display:none;"></div>
+  <script>
+// ─── State ────────────────────────────────────────────────
+let currentUser = null;      // { email, name, isAdmin }
+let complaints = [];          // current dataset from SDK
+let currentView = 'dashboard';
+let authTab = 'login';
+let pendingDeleteId = null;
+
+// Demo accounts (stored locally for auth simulation)
+const demoUsers = {
+  'admin@demo.com': { name: 'Admin User', pass: 'admin123', isAdmin: true },
+};
+const registeredUsers = { ...demoUsers };
+
+// ─── SDK Init ─────────────────────────────────────────────
+const dataHandler = {
+  onDataChanged(data) {
+    complaints = data;
+    refreshUI();
+  }
+};
+
+// Mock SDK for VS Code (no actual data persistence)
+window.dataSdk = {
+  localData: [],
+  async init(handler) {
+    this.handler = handler;
+    handler.onDataChanged(this.localData);
+    return { isOk: true };
+  },
+  async create(record) {
+    record.__backendId = 'id-' + Date.now() + Math.random().toString(36).substr(2, 9);
+    this.localData.push(record);
+    this.handler.onDataChanged([...this.localData]);
+    return { isOk: true };
+  },
+  async update(record) {
+    const idx = this.localData.findIndex(r => r.__backendId === record.__backendId);
+    if (idx >= 0) this.localData[idx] = record;
+    this.handler.onDataChanged([...this.localData]);
+    return { isOk: true };
+  },
+  async delete(record) {
+    this.localData = this.localData.filter(r => r.__backendId !== record.__backendId);
+    this.handler.onDataChanged([...this.localData]);
+    return { isOk: true };
+  }
+};
+
+// Mock Element SDK for VS Code
+window.elementSdk = {
+  config: {},
+  init(element) {
+    this.config = { ...element.defaultConfig };
+    element.onConfigChange(this.config);
+  },
+  async setConfig(partial) {
+    this.config = { ...this.config, ...partial };
+  }
+};
+
+async function initSDK() {
+  const result = await window.dataSdk.init(dataHandler);
+  if (!result.isOk) showToast('Failed to connect to data storage.', 'error');
+}
+
+initSDK();
+
+// ─── Element SDK Init ─────────────────────────────────────
+const defaultConfig = {
+  app_title: 'Smart Complaint System',
+  org_name: 'Your Organization',
+  footer_text: '© 2026 Complaint System',
+  background_color: '#0f1117',
+  surface_color: '#1a1d27',
+  text_color: '#e8eaf0',
+  accent_color: '#4f8ef7',
+  action_color: '#3dd68c',
+};
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => {
+    const title = config.app_title || defaultConfig.app_title;
+    const org   = config.org_name  || defaultConfig.org_name;
+    const foot  = config.footer_text || defaultConfig.footer_text;
+
+    document.getElementById('auth-app-title').textContent = title;
+    document.getElementById('auth-org-name').textContent = org;
+    document.getElementById('header-app-title').textContent = title;
+    document.getElementById('footer-text-sidebar').textContent = foot;
+    document.title = title;
+
+    const root = document.documentElement;
+    root.style.setProperty('--bg',      config.background_color || defaultConfig.background_color);
+    root.style.setProperty('--surface', config.surface_color    || defaultConfig.surface_color);
+    root.style.setProperty('--text',    config.text_color       || defaultConfig.text_color);
+    root.style.setProperty('--accent',  config.accent_color     || defaultConfig.accent_color);
+    root.style.setProperty('--success', config.action_color     || defaultConfig.action_color);
+  },
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: (v) => window.elementSdk.setConfig({ background_color: v }) },
+      { get: () => config.surface_color    || defaultConfig.surface_color,    set: (v) => window.elementSdk.setConfig({ surface_color: v })    },
+      { get: () => config.text_color       || defaultConfig.text_color,       set: (v) => window.elementSdk.setConfig({ text_color: v })       },
+      { get: () => config.accent_color     || defaultConfig.accent_color,     set: (v) => window.elementSdk.setConfig({ accent_color: v })     },
+      { get: () => config.action_color     || defaultConfig.action_color,     set: (v) => window.elementSdk.setConfig({ action_color: v })     },
+    ],
+    borderables: [],
+    fontEditable: undefined,
+    fontSizeable: undefined,
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['app_title',   config.app_title   || defaultConfig.app_title],
+    ['org_name',    config.org_name    || defaultConfig.org_name],
+    ['footer_text', config.footer_text || defaultConfig.footer_text],
+  ]),
+});
+
+// ─── Auth ──────────────────────────────────────────────────
+function switchAuthTab(tab) {
+  authTab = tab;
+  const isSignup = tab === 'signup';
+  document.getElementById('signup-name-field').style.display = isSignup ? 'block' : 'none';
+  document.getElementById('auth-btn-text').textContent = isSignup ? 'Create Account' : 'Login';
+  document.getElementById('admin-hint').style.display  = isSignup ? 'none' : 'block';
+  document.getElementById('auth-error').style.display  = 'none';
+
+  const loginTab  = document.getElementById('tab-login');
+  const signupTab = document.getElementById('tab-signup');
+  if (isSignup) {
+    loginTab.style.background  = 'transparent'; loginTab.style.color  = '#8b92ae';
+    signupTab.style.background = 'var(--accent)'; signupTab.style.color = '#fff';
+  } else {
+    signupTab.style.background = 'transparent'; signupTab.style.color  = '#8b92ae';
+    loginTab.style.background  = 'var(--accent)'; loginTab.style.color  = '#fff';
+  }
+}
+
+function handleAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('auth-email').value.trim().toLowerCase();
+  const pass  = document.getElementById('auth-pass').value;
+  const name  = document.getElementById('auth-name').value.trim();
+  const errEl = document.getElementById('auth-error');
+  errEl.style.display = 'none';
+
+  if (authTab === 'signup') {
+    if (!name) { showAuthError('Please enter your full name.'); return; }
+    if (registeredUsers[email]) { showAuthError('Account already exists. Please login.'); return; }
+    registeredUsers[email] = { name, pass, isAdmin: false };
+    currentUser = { email, name, isAdmin: false };
+    showToast(`Welcome, ${name}! Account created.`, 'success');
+  } else {
+    const user = registeredUsers[email];
+    if (!user || user.pass !== pass) { showAuthError('Invalid email or password.'); return; }
+    currentUser = { email, name: user.name, isAdmin: user.isAdmin };
+    showToast(`Welcome back, ${user.name}!`, 'success');
+  }
+
+  setTimeout(() => {
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('main-app').style.display    = 'flex';
+    document.getElementById('header-user').textContent   = currentUser.name || currentUser.email;
+    if (currentUser.isAdmin) {
+      document.getElementById('admin-badge').style.display = 'inline-flex';
+      document.getElementById('nav-admin').style.display   = 'flex';
+    }
+    switchView('dashboard');
+    lucide.createIcons();
+  }, 100);
+}
+
+function showAuthError(msg) {
+  const el = document.getElementById('auth-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('main-app').style.display  = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  document.getElementById('auth-email').value = '';
+  document.getElementById('auth-pass').value  = '';
+  document.getElementById('auth-error').style.display = 'none';
+  document.getElementById('admin-badge').style.display = 'none';
+  document.getElementById('nav-admin').style.display   = 'none';
+  lucide.createIcons();
+}
+
+// ─── Navigation ────────────────────────────────────────────
+const views = ['dashboard','complaints','new','admin'];
+function switchView(view) {
+  currentView = view;
+  views.forEach(v => {
+    document.getElementById('view-' + v).style.display   = v === view ? 'block' : 'none';
+    document.getElementById('nav-' + v)?.classList.toggle('active', v === view);
+  });
+  if (view === 'dashboard')  renderDashboard();
+  if (view === 'complaints') renderComplaints();
+  if (view === 'admin')      renderAdmin();
+}
+
+// ─── Data Helpers ──────────────────────────────────────────
+function myComplaints() {
+  if (!currentUser) return [];
+  return currentUser.isAdmin ? complaints : complaints.filter(c => c.submitted_by === currentUser.email);
+}
+
+function refreshUI() {
+  if (currentView === 'dashboard')  renderDashboard();
+  if (currentView === 'complaints') renderComplaints();
+  if (currentView === 'admin')      renderAdmin();
+}
+
+// ─── Dashboard ─────────────────────────────────────────────
+function renderDashboard() {
+  const list = myComplaints();
+  document.getElementById('stat-total').textContent    = list.length;
+  document.getElementById('stat-pending').textContent  = list.filter(c => c.status === 'Pending').length;
+  document.getElementById('stat-progress').textContent = list.filter(c => c.status === 'In Progress').length;
+  document.getElementById('stat-resolved').textContent = list.filter(c => c.status === 'Resolved').length;
+  document.getElementById('stat-critical').textContent = list.filter(c => c.priority === 'Critical').length;
+
+  const recent = [...list].sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,5);
+  const container = document.getElementById('dashboard-list');
+  if (!recent.length) {
+    container.innerHTML = '<div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">No complaints yet. <span style="color:var(--accent); cursor:pointer;" onclick="switchView(\'new\')">Raise one →</span></div>';
+    return;
+  }
+  renderComplaintRows(container, recent, false);
+}
+
+// ─── Complaints ────────────────────────────────────────────
+function renderComplaints() {
+  const statusF   = document.getElementById('filter-status')?.value   || '';
+  const priorityF = document.getElementById('filter-priority')?.value || '';
+  let list = myComplaints();
+  if (statusF)   list = list.filter(c => c.status === statusF);
+  if (priorityF) list = list.filter(c => c.priority === priorityF);
+  list = [...list].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  renderComplaintRows(document.getElementById('complaints-list'), list, false);
+}
+
+function renderComplaintRows(container, list, isAdmin) {
+  if (!list.length) {
+    container.innerHTML = '<div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">No complaints found.</div>';
+    return;
+  }
+  // Track existing rows
+  const existingMap = new Map([...container.querySelectorAll('[data-rid]')].map(el => [el.dataset.rid, el]));
+  const orderedIds = list.map(c => c.__backendId);
+
+  list.forEach(c => {
+    const id = c.__backendId;
+    if (existingMap.has(id)) {
+      updateComplaintRow(existingMap.get(id), c, isAdmin);
+      existingMap.delete(id);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'complaint-row';
+      row.dataset.rid = id;
+      row.innerHTML = buildRowHTML(c, isAdmin);
+      container.appendChild(row);
+    }
+  });
+
+  // Remove stale rows
+  existingMap.forEach(el => el.remove());
+
+  // Re-order
+  orderedIds.forEach(id => {
+    const el = container.querySelector(`[data-rid="${id}"]`);
+    if (el) container.appendChild(el);
+  });
+
+  // Remove empty placeholder if present
+  const placeholder = container.querySelector('[data-placeholder]');
+  if (placeholder) placeholder.remove();
+
+  lucide.createIcons();
+}
+
+function buildRowHTML(c, isAdmin) {
+  const date = new Date(c.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' });
+  const statusCls   = c.status === 'Pending' ? 'badge-pending' : c.status === 'In Progress' ? 'badge-progress' : 'badge-resolved';
+  const priorityCls = 'badge-' + c.priority.toLowerCase();
+  return `
+    <div style="display:flex; align-items:center; gap:14px; padding:14px 18px; cursor:pointer;" onclick="openDetail('${c.__backendId}')">
+      <div style="flex:1; min-width:0;">
+        <div style="font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escHtml(c.title)}</div>
+        <div style="font-size:11px; color:#8b92ae; margin-top:2px;">${escHtml(c.category)} • ${isAdmin ? escHtml(c.submitted_by) + ' • ' : ''}${date}</div>
+      </div>
+      <span class="badge ${priorityCls}">${c.priority}</span>
+      <span class="badge ${statusCls}">${c.status}</span>
+      <i data-lucide="chevron-right" style="width:14px;height:14px;color:#8b92ae;flex-shrink:0;"></i>
+    </div>`;
+}
+
+function updateComplaintRow(el, c, isAdmin) {
+  el.innerHTML = buildRowHTML(c, isAdmin);
+}
+
+// ─── Submit Complaint ─────────────────────────────────────
+async function submitComplaint(e) {
+  e.preventDefault();
+  if (complaints.length >= 999) {
+    document.getElementById('limit-warning').style.display = 'block';
+    return;
+  }
+  const btn = document.getElementById('submit-btn');
+  const txt = document.getElementById('submit-btn-text');
+  btn.disabled = true;
+  txt.innerHTML = '<span class="spinner"></span> Submitting...';
+
+  const now = new Date().toISOString();
+  const record = {
+    complaint_id: 'CMP-' + Date.now(),
+    title:        document.getElementById('c-title').value.trim(),
+    description:  document.getElementById('c-desc').value.trim(),
+    category:     document.getElementById('c-category').value,
+    priority:     document.getElementById('c-priority').value,
+    status:       'Pending',
+    submitted_by: currentUser.email,
+    assigned_to:  '',
+    created_at:   now,
+    updated_at:   now,
+  };
+
+  const result = await window.dataSdk.create(record);
+  btn.disabled = false;
+  txt.textContent = 'Submit Complaint';
+
+  if (result.isOk) {
+    showToast('Complaint submitted successfully! 📋', 'success');
+    document.getElementById('complaint-form').reset();
+    simulateEmailNotification(currentUser.email, record.title);
+    switchView('complaints');
+  } else {
+    showToast('Failed to submit. Please try again.', 'error');
+  }
+}
+
+// ─── Detail Modal ──────────────────────────────────────────
+function openDetail(backendId) {
+  const c = complaints.find(x => x.__backendId === backendId);
+  if (!c) return;
+  const modal = document.getElementById('detail-modal');
+  const body  = document.getElementById('modal-body');
+  document.getElementById('modal-title').textContent = c.title;
+
+  const statusCls   = c.status === 'Pending' ? 'badge-pending' : c.status === 'In Progress' ? 'badge-progress' : 'badge-resolved';
+  const priorityCls = 'badge-' + c.priority.toLowerCase();
+  const created = new Date(c.created_at).toLocaleString();
+  const updated = new Date(c.updated_at).toLocaleString();
+
+  body.innerHTML = `
+    <div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap;">
+      <span class="badge ${priorityCls}">${c.priority}</span>
+      <span class="badge ${statusCls}">${c.status}</span>
+      <span class="badge" style="background:rgba(139,146,174,.1); color:#8b92ae;">${escHtml(c.category)}</span>
+    </div>
+    <div style="background:var(--surface2); border-radius:10px; padding:14px; margin-bottom:14px; font-size:13px; line-height:1.7; color:#c0c6d8;">${escHtml(c.description)}</div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:16px; font-size:12px;">
+      <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+        <div style="color:#8b92ae; margin-bottom:3px;">Submitted by</div>
+        <div style="font-weight:600;">${escHtml(c.submitted_by)}</div>
+      </div>
+      <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+        <div style="color:#8b92ae; margin-bottom:3px;">Assigned to</div>
+        <div style="font-weight:600;">${c.assigned_to ? escHtml(c.assigned_to) : '<span style="color:#8b92ae;">Unassigned</span>'}</div>
+      </div>
+      <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+        <div style="color:#8b92ae; margin-bottom:3px;">Created</div>
+        <div style="font-weight:600;">${created}</div>
+      </div>
+      <div style="background:var(--surface2); border-radius:8px; padding:10px;">
+        <div style="color:#8b92ae; margin-bottom:3px;">Last Updated</div>
+        <div style="font-weight:600;">${updated}</div>
+      </div>
+    </div>
+    <div style="font-size:11px; color:#8b92ae; font-family:'JetBrains Mono',monospace;">ID: ${escHtml(c.complaint_id)}</div>
+  `;
+  modal.style.display = 'flex';
+  lucide.createIcons();
+}
+
+function closeModal(e) {
+  if (e.target === document.getElementById('detail-modal')) {
+    document.getElementById('detail-modal').style.display = 'none';
+  }
+}
+
+// ─── Admin Panel ───────────────────────────────────────────
+function renderAdmin() {
+  const list = [...complaints].sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+  const container = document.getElementById('admin-list');
+  if (!list.length) {
+    container.innerHTML = '<div style="padding:32px; text-align:center; color:#8b92ae; font-size:13px;">No complaints to manage.</div>';
+    return;
+  }
+
+  // Build admin rows with status/assign controls
+  const existingMap = new Map([...container.querySelectorAll('[data-admin-rid]')].map(el => [el.dataset.adminRid, el]));
+  const orderedIds = list.map(c => c.__backendId);
+
+  list.forEach(c => {
+    const id = c.__backendId;
+    if (existingMap.has(id)) {
+      updateAdminRow(existingMap.get(id), c);
+      existingMap.delete(id);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'complaint-row';
+      row.dataset.adminRid = id;
+      row.innerHTML = buildAdminRowHTML(c);
+      container.appendChild(row);
+    }
+  });
+  existingMap.forEach(el => el.remove());
+  orderedIds.forEach(id => {
+    const el = container.querySelector(`[data-admin-rid="${id}"]`);
+    if (el) container.appendChild(el);
+  });
+
+  lucide.createIcons();
+}
+
+function buildAdminRowHTML(c) {
+  const statusCls   = c.status === 'Pending' ? 'badge-pending' : c.status === 'In Progress' ? 'badge-progress' : 'badge-resolved';
+  const priorityCls = 'badge-' + c.priority.toLowerCase();
+  const loadId = 'load-' + c.__backendId.replace(/[^a-z0-9]/gi,'');
+  return `
+    <div style="padding:14px 18px;">
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:0;">
+          <div style="font-size:13px; font-weight:600;">${escHtml(c.title)}</div>
+          <div style="font-size:11px; color:#8b92ae; margin-top:2px;">${escHtml(c.submitted_by)} • ${escHtml(c.category)}</div>
+        </div>
+        <span class="badge ${priorityCls}">${c.priority}</span>
+        <span class="badge ${statusCls}">${c.status}</span>
+        <div id="${loadId}" style="display:none;"><div class="spinner" style="border-top-color:var(--accent);"></div></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <div style="display:flex; align-items:center; gap:6px; font-size:12px; color:#8b92ae;">
+          <i data-lucide="user-check" style="width:13px;height:13px;"></i>
+          <input class="input-field" style="width:160px; padding:5px 10px; font-size:12px;" 
+            value="${escHtml(c.assigned_to)}" placeholder="Assign to..." id="assign-${c.__backendId.replace(/[^a-z0-9]/gi,'')}"
+            onkeydown="if(event.key==='Enter'){adminUpdate('${c.__backendId}','assign',this.value)}"/>
+          <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" 
+            onclick="adminUpdate('${c.__backendId}','assign',document.getElementById('assign-${c.__backendId.replace(/[^a-z0-9]/gi,'')}').value)">Assign</button>
+        </div>
+        <div style="display:flex; gap:6px;">
+          ${c.status !== 'Pending'     ? `<button class="btn btn-ghost" style="padding:4px 12px; font-size:11px; color:var(--warning);" onclick="adminUpdate('${c.__backendId}','status','Pending')">→ Pending</button>` : ''}
+          ${c.status !== 'In Progress' ? `<button class="btn btn-ghost" style="padding:4px 12px; font-size:11px; color:var(--accent);"   onclick="adminUpdate('${c.__backendId}','status','In Progress')">→ In Progress</button>` : ''}
+          ${c.status !== 'Resolved'    ? `<button class="btn btn-success" style="padding:4px 12px; font-size:11px;" onclick="adminUpdate('${c.__backendId}','status','Resolved')">✓ Resolve</button>` : ''}
+        </div>
+        <div id="delete-area-${c.__backendId.replace(/[^a-z0-9]/gi,'')}" class="confirm-inline">
+          <button class="btn btn-danger" style="padding:4px 12px; font-size:11px;" 
+            onclick="showDeleteConfirm('${c.__backendId}')">
+            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete
+          </button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function updateAdminRow(el, c) {
+  // Only rebuild if status/assigned_to changed to avoid disrupting typed input
+  const statusEl = el.querySelector('.badge-pending, .badge-progress, .badge-resolved');
+  if (statusEl) {
+    const cls = c.status === 'Pending' ? 'badge-pending' : c.status === 'In Progress' ? 'badge-progress' : 'badge-resolved';
+    statusEl.className = 'badge ' + cls;
+    statusEl.textContent = c.status;
+  }
+}
+
+async function adminUpdate(backendId, field, value) {
+  const c = complaints.find(x => x.__backendId === backendId);
+  if (!c) return;
+  const cleanId = backendId.replace(/[^a-z0-9]/gi,'');
+  const loadEl = document.getElementById('load-' + cleanId);
+  if (loadEl) loadEl.style.display = 'block';
+
+  const updated = { ...c, updated_at: new Date().toISOString() };
+  if (field === 'status')   updated.status      = value;
+  if (field === 'assign')   updated.assigned_to = value;
+
+  const result = await window.dataSdk.update(updated);
+  if (loadEl) loadEl.style.display = 'none';
+
+  if (result.isOk) {
+    showToast(field === 'status' ? `Status updated to "${value}"` : `Assigned to "${value}"`, 'success');
+    if (field === 'status' && updated.submitted_by) {
+      simulateEmailNotification(updated.submitted_by, updated.title, value);
+    }
+  } else {
+    showToast('Update failed. Please try again.', 'error');
+  }
+}
+
+function showDeleteConfirm(backendId) {
+  const cleanId = backendId.replace(/[^a-z0-9]/gi,'');
+  const area = document.getElementById('delete-area-' + cleanId);
+  if (!area) return;
+  area.innerHTML = `
+    <span style="font-size:12px; color:var(--danger);">Confirm delete?</span>
+    <button class="btn btn-danger" style="padding:4px 10px; font-size:11px;" onclick="deleteComplaint('${backendId}')">Yes, Delete</button>
+    <button class="btn btn-ghost" style="padding:4px 10px; font-size:11px;" onclick="renderAdmin()">Cancel</button>`;
+}
+
+async function deleteComplaint(backendId) {
+  const c = complaints.find(x => x.__backendId === backendId);
+  if (!c) return;
+  const cleanId = backendId.replace(/[^a-z0-9]/gi,'');
+  const area = document.getElementById('delete-area-' + cleanId);
+  if (area) area.innerHTML = '<div class="spinner" style="border-top-color:var(--danger);"></div>';
+
+  const result = await window.dataSdk.delete(c);
+  if (result.isOk) {
+    showToast('Complaint deleted.', 'info');
+  } else {
+    showToast('Delete failed.', 'error');
+    renderAdmin();
+  }
+}
+
+// ─── Email Simulation ──────────────────────────────────────
+function simulateEmailNotification(to, subject, status) {
+  const msg = status
+    ? `📧 Email sent to ${to}: Your complaint "${subject}" is now "${status}"`
+    : `📧 Confirmation sent to ${to}: Complaint "${subject}" received`;
+  showToast(msg, 'info');
+}
+
+// ─── Toast ─────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast toast-${type}`;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+// ─── Utils ─────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+lucide.createIcons();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e2b76332200793b',t:'MTc3NDU4Mzc1MC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
